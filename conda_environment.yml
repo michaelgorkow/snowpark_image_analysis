@@ -1,0 +1,27 @@
+name: py_snowpark_3_9_1_5
+channels:
+  - https://repo.anaconda.com/pkgs/snowflake
+  - nodefaults
+dependencies:
+  - python=3.9
+  - pip
+  - pip:
+    # Snowpark
+    - snowflake-snowpark-python[pandas]==1.5.0
+    # Basics
+    - pandas==1.5.3
+    - numpy==1.24.3
+    # CV
+    - torch==1.12.1
+    - torchvision==0.13.1
+    - transformers==4.24.0
+    - huggingface-hub==0.10.1
+    - scikit-image==0.20.0
+    # Visualization
+    - matplotlib==3.7.1
+    # Misc
+    - cloudpickle==2.0.0
+    - jupyter
+    - cachetools==4.2.2
+    - joblib==1.1.0
+    - pandarallel==1.6.4
