@@ -19,6 +19,7 @@ dependencies:
     - scikit-image==0.20.0
     # Visualization
     - matplotlib==3.7.1
+    - seaborn==0.12.2
     # Misc
     - cloudpickle==2.0.0
     - jupyter
