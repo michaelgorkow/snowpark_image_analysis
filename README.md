@@ -28,5 +28,5 @@ jupyter notebook
 There is a whole series of blog articles that reference the code in this Github repository:  
 [Part 1: Uploading, Querying and Visualizing Images](https://medium.com/@michaelgorkow/image-data-in-snowflake-2d0e87924c61)  
 [Part 2: Image Classification](https://medium.com/@michaelgorkow/image-data-in-snowflake-part-2-image-classification-61f401141fc0)  
-[Part 3: Object Detection]()  
+[Part 3: Object Detection](https://medium.com/@michaelgorkow/image-data-in-snowflake-part-3-object-detection-beaf4f1cd20e)  
 [Part 4: Image Embeddings]()  
