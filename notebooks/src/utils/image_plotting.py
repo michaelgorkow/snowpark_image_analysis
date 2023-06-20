@@ -6,6 +6,8 @@ from textwrap import wrap
 import numpy as np
 import snowflake.snowpark.functions as F
 from pandarallel import pandarallel
+import seaborn as sns
+from PIL import Image, ImageFont, ImageDraw
 
 pandarallel.initialize(progress_bar=False)
 
@@ -130,3 +132,61 @@ def show_classifications_from_df(df, relative_path='RELATIVE_PATH', stage='@', t
         ax2.set_title('Predicted Probability')
         fig.subplots_adjust(left=None, bottom=None, right=1.5, top=None, wspace=None, hspace=0.5)
         row_ix += 1
+
+
+def show_object_detections_from_df(df, relative_path='RELATIVE_PATH', stage='@', title='RELATIVE_PATH', max_images=10, resize_shape=None, figsize=None):
+    # remove timestamp columns
+    df = df.drop([col[0] for col in df.dtypes if col[1] == 'timestamp'])
+    filter_list = list(df[['RELATIVE_PATH']].distinct().limit(max_images).to_pandas().values.flatten())
+    df = df[df['RELATIVE_PATH'].isin(filter_list)].cache_result()
+    # Download all unique images in parallel
+    unique_images = df[[relative_path]].distinct()
+    unique_images = unique_images.to_df(['RELATIVE_PATH'])
+    unique_images = unique_images.with_column('PRESIGNED_URL', F.call_builtin('GET_PRESIGNED_URL', stage, F.col('RELATIVE_PATH'))).to_pandas()
+    unique_images['IMAGE'] = unique_images.parallel_apply(lambda x: io.imread(x['PRESIGNED_URL']), axis=1)
+    unique_images['IMAGE_WIDTH'] = unique_images.parallel_apply(lambda x: x['IMAGE'].shape[1], axis=1)
+    unique_images['IMAGE_HEIGHT'] = unique_images.parallel_apply(lambda x: x['IMAGE'].shape[0], axis=1)
+
+    # get unique objects for color mapping
+    unique_objects = df[['OBJECT_LABEL']].distinct().to_pandas().values
+    # create a color palette
+    color_palette = sns.color_palette("husl", len(unique_objects))
+    color_palette = [(int(color[0]*255), int(color[1]*255), int(color[2]*255)) for color in color_palette]
+    object_color_mapping = {k[0]:v for k,v in zip(unique_objects,color_palette)}
+
+    # resize
+    if resize_shape is not None:
+        unique_images['IMAGE'] = unique_images.parallel_apply(lambda x: (resize(x['IMAGE'], resize_shape)*255).astype(np.uint8), axis=1)
+
+    # Download DataFrame
+    df = df.to_pandas()
+
+    # Build plot
+    fig = plt.figure(figsize=figsize)
+    font = ImageFont.truetype('../resources/fonts//arial.ttf',16)
+    image_ix = 1
+    for ix, row in unique_images.iterrows():
+        image = Image.fromarray(row['IMAGE'])
+        if resize_shape is not None:
+            image_width_scaling = resize_shape[1] / row['IMAGE_WIDTH']
+            image_height_scaling = resize_shape[0] / row['IMAGE_HEIGHT']
+        else:
+            image_width_scaling = 1
+            image_height_scaling = 1
+        draw = ImageDraw.Draw(image)
+        objects_df = df[df[relative_path] == row['RELATIVE_PATH']]
+        # draw bounding boxes
+        for ix2, row2 in objects_df.iterrows():
+            draw.rectangle(((int(row2['OBJECT_XMIN']*image_width_scaling),int(row2['OBJECT_YMIN']*image_height_scaling)), 
+                            (int(row2['OBJECT_XMAX']*image_width_scaling), int(row2['OBJECT_YMAX'])*image_height_scaling)), width=5, outline=object_color_mapping[row2['OBJECT_LABEL']])
+            draw.rectangle(((row2['OBJECT_XMIN']*image_width_scaling,row2['OBJECT_YMIN']*image_height_scaling-20), 
+                            (row2['OBJECT_XMIN']*image_width_scaling+int(font.getlength(row2['OBJECT_LABEL'])), row2['OBJECT_YMIN']*image_height_scaling)), width=5, fill=object_color_mapping[row2['OBJECT_LABEL']])
+            draw.text((row2['OBJECT_XMIN']*image_width_scaling,row2['OBJECT_YMIN']*image_height_scaling-20),row2['OBJECT_LABEL'],(255,255,255), font=font)
+        ax = fig.add_subplot(len(unique_images), 1, image_ix)
+        ax.set_title('{}'.format(row[title]))
+        plt.xticks([]), plt.yticks([])
+        plt.imshow(image)
+        image_ix += 1
+    fig.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.1)
+    plt.show()
+    return
