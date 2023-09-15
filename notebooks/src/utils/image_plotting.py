@@ -75,6 +75,7 @@ def show_similar_images(df, relative_path_left='RELATIVE_PATH_LEFT', relative_pa
         ax = fig.add_subplot(num_unique_images, max_similar_images+1, (plot_row*(max_similar_images+1))+1)
         ax.set_title('{}'.format(left_image))
         plt.imshow(unique_images[unique_images.RELATIVE_PATH == left_image]['IMAGE'].values[0])
+        plt.xticks([]), plt.yticks([])
         for ix, row in right_images.iterrows():
             ax = fig.add_subplot(num_unique_images, max_similar_images+1, (plot_row*(max_similar_images+1))+ix+2)
             if distance_col is not None:
@@ -82,6 +83,7 @@ def show_similar_images(df, relative_path_left='RELATIVE_PATH_LEFT', relative_pa
             else:
                 ax.set_title('{}'.format(row[relative_path_right]))
             plt.imshow(unique_images[unique_images.RELATIVE_PATH == row[relative_path_right]]['IMAGE'].values[0])
+            plt.xticks([]), plt.yticks([])
         plot_row += 1
     plt.show()
 
